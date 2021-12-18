@@ -10,6 +10,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.camera.core.AspectRatio;
 import androidx.fragment.app.FragmentContainerView;
 
 import com.test.corevisionandroidx.core.Constants;
@@ -56,9 +57,11 @@ public class MainActivity extends AppCompatActivity implements LoaderCallbackInt
         checkCameraPermission();
         OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, getApplicationContext(), this);
 
+        Bundle bundle = new Bundle();
+        bundle.putInt("aspect_ratio", AspectRatio.RATIO_16_9);
         getSupportFragmentManager().beginTransaction()
                 .setReorderingAllowed(true)
-                .add(R.id.fragment_container, CameraCaptureFragment.class, null)
+                .add(R.id.fragment_container, CameraCaptureFragment.class, bundle)
                 .commit();
     }
 

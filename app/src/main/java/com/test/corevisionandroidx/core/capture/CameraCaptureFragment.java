@@ -53,6 +53,8 @@ public class CameraCaptureFragment extends Fragment {
     }
 
     private void setViewAspectRatio() {
+        cameraMode = this.getArguments() != null ? this.getArguments().getInt("aspect_ratio", AspectRatio.RATIO_4_3) : AspectRatio.RATIO_4_3;
+
         ConstraintLayout.LayoutParams layoutParams = (ConstraintLayout.LayoutParams) cameraPreviewSurface.getLayoutParams();
         if (cameraMode == AspectRatio.RATIO_4_3) {
             layoutParams.dimensionRatio = "3:4";
