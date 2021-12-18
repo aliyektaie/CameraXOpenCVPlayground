@@ -94,6 +94,7 @@ public class MainActivity extends AppCompatActivity implements LoaderCallbackInt
         view.view().setLayoutParams(layoutParams);
         cameraViewContainer.addView(view.view());
 
+        view.setLifeCycleOwner(this);
         view.setCameraAspectRatio(CameraCaptureView.CAMERA_MODE_ASPECT_RATIO_3x4);
         view.enable();
 
