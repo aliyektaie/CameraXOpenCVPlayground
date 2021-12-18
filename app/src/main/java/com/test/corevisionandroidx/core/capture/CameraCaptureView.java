@@ -26,8 +26,8 @@ import java.util.concurrent.Executors;
 public class CameraCaptureView {
     public static final int CAMERA_MODE_ASPECT_RATIO_3x4 = 1;
     public static final int CAMERA_MODE_ASPECT_RATIO_4x3 = 2;
-    public static final int CAMERA_MODE_ASPECT_RATIO_9x16 = 3;
     public static final int CAMERA_MODE_ASPECT_RATIO_16x9 = 4;
+    public static final int CAMERA_MODE_ASPECT_RATIO_9x16 = 3;
     private ConstraintLayout _view = null;
     private PreviewView cameraPreviewView = null;
     private Preview cameraPreview = null;

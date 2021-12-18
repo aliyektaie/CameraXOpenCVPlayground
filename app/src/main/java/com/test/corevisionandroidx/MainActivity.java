@@ -13,8 +13,11 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.camera.core.AspectRatio;
+import androidx.fragment.app.FragmentContainerView;
 
 import com.test.corevisionandroidx.core.Constants;
+import com.test.corevisionandroidx.core.capture.CameraCaptureFragment;
 import com.test.corevisionandroidx.core.capture.CameraCaptureView;
 
 import org.opencv.android.InstallCallbackInterface;
@@ -24,16 +27,12 @@ import org.opencv.android.OpenCVLoader;
 public class MainActivity extends AppCompatActivity implements LoaderCallbackInterface {
     private static final int MY_CAMERA_REQUEST_CODE = 100;
 
-    private LinearLayout cameraOptionsContainer = null;
-    private RelativeLayout cameraViewContainer = null;
-    private CameraCaptureView currentCameraView = null;
+    private FragmentContainerView fragmentContainer = null;
 
     @Override
     public void onPause()
     {
         super.onPause();
-        if (currentCameraView != null)
-            currentCameraView.disable();
     }
 
     @Override
@@ -58,49 +57,14 @@ public class MainActivity extends AppCompatActivity implements LoaderCallbackInt
             System.out.println(init);
         }
 
-        cameraOptionsContainer = findViewById(R.id.functions_container);
-        cameraViewContainer = findViewById(R.id.camera_view_container);
-
-        findViewById(R.id.cmd_open_calibration).setOnClickListener(this::onCalibrateCameraClick);
-
+        fragmentContainer = findViewById(R.id.fragment_container);
         checkCameraPermission();
         OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, getApplicationContext(), this);
 
-        new Thread(() -> {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-
-            }
-
-            runOnUiThread(()-> {
-                onCalibrateCameraClick(null);
-            });
-        }).start();
-    }
-
-    private void onCalibrateCameraClick(View view) {
-        CameraCaptureView cameraView = setupCameraView();
-
-    }
-
-    @NonNull
-    private CameraCaptureView setupCameraView() {
-        cameraOptionsContainer.setVisibility(View.GONE);
-        cameraViewContainer.setVisibility(View.VISIBLE);
-
-        CameraCaptureView view = CameraCaptureView.create(this);
-        RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT);
-        view.view().setLayoutParams(layoutParams);
-        cameraViewContainer.addView(view.view());
-
-        view.setLifeCycleOwner(this);
-        view.setCameraAspectRatio(CameraCaptureView.CAMERA_MODE_ASPECT_RATIO_3x4);
-        view.enable();
-
-        currentCameraView = view;
-
-        return view;
+        getSupportFragmentManager().beginTransaction()
+                .setReorderingAllowed(true)
+                .add(R.id.fragment_container, CameraCaptureFragment.class, null)
+                .commit();
     }
 
     private void checkCameraPermission() {
@@ -127,13 +91,6 @@ public class MainActivity extends AppCompatActivity implements LoaderCallbackInt
     public void onManagerConnected(int status) {
         switch (status) {
             case LoaderCallbackInterface.SUCCESS: {
-                for (int i = 0; i < cameraOptionsContainer.getChildCount(); i++) {
-                    cameraOptionsContainer.getChildAt(i).setEnabled(true);
-                }
-
-                if (currentCameraView != null) {
-                    currentCameraView.enable();
-                }
             }
             break;
             default: {
