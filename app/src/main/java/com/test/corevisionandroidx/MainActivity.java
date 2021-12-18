@@ -4,21 +4,16 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.view.View;
 import android.view.WindowManager;
-import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.camera.core.AspectRatio;
 import androidx.fragment.app.FragmentContainerView;
 
 import com.test.corevisionandroidx.core.Constants;
 import com.test.corevisionandroidx.core.capture.CameraCaptureFragment;
-import com.test.corevisionandroidx.core.capture.CameraCaptureView;
 
 import org.opencv.android.InstallCallbackInterface;
 import org.opencv.android.LoaderCallbackInterface;

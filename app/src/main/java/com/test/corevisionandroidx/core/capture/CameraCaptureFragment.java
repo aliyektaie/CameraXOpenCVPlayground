@@ -18,6 +18,7 @@ import androidx.camera.core.Preview;
 import androidx.camera.core.impl.ImageOutputConfig;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
@@ -47,7 +48,19 @@ public class CameraCaptureFragment extends Fragment {
 
         cameraExecutor = Executors.newSingleThreadExecutor();
         cameraPreviewSurface = view.findViewById(R.id.camera_preview_surface);
+        setViewAspectRatio();
         setupCamera();
+    }
+
+    private void setViewAspectRatio() {
+        ConstraintLayout.LayoutParams layoutParams = (ConstraintLayout.LayoutParams) cameraPreviewSurface.getLayoutParams();
+        if (cameraMode == AspectRatio.RATIO_4_3) {
+            layoutParams.dimensionRatio = "3:4";
+        } else if (cameraMode == AspectRatio.RATIO_16_9) {
+            layoutParams.dimensionRatio = "9:16";
+        } else {
+            throw new RuntimeException();
+        }
     }
 
     private void setupCamera() {
@@ -108,10 +121,6 @@ public class CameraCaptureFragment extends Fragment {
         super.onDestroyView();
 
         cameraExecutor.shutdown();
-    }
-
-    public void setCameraAspectRatio(int mode) {
-        this.cameraMode = mode;
     }
 
     public int getCameraAspectRatio() {
