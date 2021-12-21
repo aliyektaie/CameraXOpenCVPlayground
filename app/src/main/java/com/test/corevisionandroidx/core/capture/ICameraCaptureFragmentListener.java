@@ -13,7 +13,7 @@ public interface ICameraCaptureFragmentListener {
 
     void onError(Exception ex, String message);
 
-    void onNewFrame(Bitmap frame, Mat opencvFrame);
+    Mat onNewFrame(Bitmap frame, Mat opencvFrame);
 
     void setContainer(Activity activity, CameraCaptureFragment fragment);
 }

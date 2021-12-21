@@ -55,6 +55,7 @@ public class CameraCaptureFragment extends Fragment {
     private PreviewView cameraPreviewSurface = null;
     private ImageView cameraProcessedSurface = null;
     private Bitmap bitmapBuffer = null;
+    private Bitmap previousFrame = null;
     private int cameraSensorOrientation = -1;
     private static final SparseIntArray INVERSE_ORIENTATIONS = new SparseIntArray();
     private static final SparseIntArray DEFAULT_ORIENTATIONS = new SparseIntArray();
@@ -200,42 +201,27 @@ public class CameraCaptureFragment extends Fragment {
             Bitmap frame = adjustBitmapOrientation(activity, bitmapBuffer);
             Mat frameMat = new Mat();
             Utils.bitmapToMat(frame, frameMat);
-            invokeListenerNewFrame(frame, frameMat);
+            Mat frameToDisplay = invokeListenerNewFrame(frame, frameMat);
+            Bitmap bitmapToDisplay = Bitmap.createBitmap(frameToDisplay.cols(), frameToDisplay.rows(),Bitmap.Config.ARGB_8888);
+            Utils.matToBitmap(frameToDisplay, bitmapToDisplay);
+            frame.recycle();
 
             activity.runOnUiThread(() -> {
-                cameraProcessedSurface.setImageBitmap(frame);
+                cameraProcessedSurface.setImageBitmap(bitmapToDisplay);
 
-                releaseMemory(frame, frameMat);
+                releaseMemory(bitmapToDisplay, frameMat);
             });
         } else {
             invokeListenerOnError(null, "Can not access the containing activity.");
         }
         image.close();
-        //        Utils.
-//        final Bitmap bitmap = image.getImage();
-//
-//
-//
-//        if(bitmap==null)
-//            return;
-//
-//        Mat mat = new Mat();
-//        Utils.bitmapToMat(bitmap, mat);
-//
-//
-//        Imgproc.cvtColor(mat, mat, currentImageType);
-//        Utils.matToBitmap(mat, bitmap);
-//        runOnUiThread(new Runnable() {
-//            @Override
-//            public void run() {
-//                ivBitmap.setImageBitmap(bitmap);
-//            }
-//        });
     }
 
     private void releaseMemory(Bitmap frame, Mat frameMat) {
         frameMat.release();
-        frame.recycle();
+
+        if (previousFrame != null) previousFrame.recycle();
+        previousFrame = frame;
     }
 
     private void invokeListenerOnError(Exception ex, String message) {
@@ -244,10 +230,18 @@ public class CameraCaptureFragment extends Fragment {
         }
     }
 
-    private void invokeListenerNewFrame(Bitmap frame, Mat frameMat) {
+    private Mat invokeListenerNewFrame(Bitmap frame, Mat frameMat) {
+        Mat result = null;
+
         if (listener != null) {
-            listener.onNewFrame(frame, frameMat);
+            try {
+                result = listener.onNewFrame(frame, frameMat);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
         }
+
+        return result;
     }
 
     @SuppressLint({"UnsafeOptInUsageError", "RestrictedApi"})

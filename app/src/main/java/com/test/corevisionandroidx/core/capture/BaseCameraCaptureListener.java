@@ -1,9 +1,6 @@
 package com.test.corevisionandroidx.core.capture;
 
 import android.app.Activity;
-import android.graphics.Bitmap;
-
-import org.opencv.core.Mat;
 
 public abstract class BaseCameraCaptureListener implements ICameraCaptureFragmentListener {
     protected Activity _activity = null;
