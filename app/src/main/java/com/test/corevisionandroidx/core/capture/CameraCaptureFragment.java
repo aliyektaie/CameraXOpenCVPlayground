@@ -1,22 +1,21 @@
 package com.test.corevisionandroidx.core.capture;
 
+import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
-import android.content.res.Configuration;
 import android.graphics.Bitmap;
-import android.graphics.PixelFormat;
+import android.graphics.Matrix;
+import android.hardware.camera2.CameraCharacteristics;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.HandlerThread;
 import android.util.Size;
-import android.view.LayoutInflater;
+import android.util.SparseIntArray;
 import android.view.Surface;
-import android.view.SurfaceView;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.camera.camera2.interop.Camera2CameraInfo;
 import androidx.camera.core.AspectRatio;
 import androidx.camera.core.Camera;
 import androidx.camera.core.CameraInfoUnavailableException;
@@ -24,7 +23,6 @@ import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageProxy;
 import androidx.camera.core.Preview;
-import androidx.camera.core.impl.ImageOutputConfig;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.constraintlayout.widget.ConstraintLayout;
@@ -36,13 +34,14 @@ import com.test.corevisionandroidx.R;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
-import org.opencv.imgproc.Imgproc;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class CameraCaptureFragment extends Fragment {
+    private static final int SENSOR_ORIENTATION_INVERSE_DEGREES = 270;
+    private static final int SENSOR_ORIENTATION_DEFAULT_DEGREES = 90;
+
     private ExecutorService cameraExecutor = null;
     private ProcessCameraProvider cameraProvider = null;
     private ICameraCaptureFragmentListener listener = null;
@@ -53,6 +52,23 @@ public class CameraCaptureFragment extends Fragment {
     private PreviewView cameraPreviewSurface = null;
     private ImageView cameraProcessedSurface = null;
     private Bitmap bitmapBuffer = null;
+    private int cameraSensorOrientation = -1;
+    private static final SparseIntArray INVERSE_ORIENTATIONS = new SparseIntArray();
+    private static final SparseIntArray DEFAULT_ORIENTATIONS = new SparseIntArray();
+
+    static {
+        INVERSE_ORIENTATIONS.append(Surface.ROTATION_270, 0);
+        INVERSE_ORIENTATIONS.append(Surface.ROTATION_180, 90);
+        INVERSE_ORIENTATIONS.append(Surface.ROTATION_90, 180);
+        INVERSE_ORIENTATIONS.append(Surface.ROTATION_0, 270);
+    }
+
+    static {
+        DEFAULT_ORIENTATIONS.append(Surface.ROTATION_90, 0);
+        DEFAULT_ORIENTATIONS.append(Surface.ROTATION_0, 90);
+        DEFAULT_ORIENTATIONS.append(Surface.ROTATION_270, 180);
+        DEFAULT_ORIENTATIONS.append(Surface.ROTATION_180, 270);
+    }
 
     public CameraCaptureFragment() {
         super(R.layout.camera_capture_fragment);
@@ -92,12 +108,12 @@ public class CameraCaptureFragment extends Fragment {
             try {
                 cameraProvider = cameraProviderFuture.get();
             } catch (Exception ex) {
-                listener.onError(ex, "Unable to get camera provider.");
+                invokeListenerOnError(ex, "Unable to get camera provider.");
                 return;
             }
 
             if (!hasBackCamera()) {
-                listener.onError(null, "Device does not have a back camera.");
+                invokeListenerOnError(null, "Device does not have a back camera.");
             }
 
             bindCameraUseCases();
@@ -117,27 +133,25 @@ public class CameraCaptureFragment extends Fragment {
         cameraProvider.unbindAll();
         try {
             camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis);
+
+            @SuppressLint({"RestrictedApi", "UnsafeOptInUsageError"})
+            CameraCharacteristics cameraCharacteristics = Camera2CameraInfo.extractCameraCharacteristics(camera.getCameraInfo());
+            this.cameraSensorOrientation = cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+
             preview.setSurfaceProvider(cameraPreviewSurface.getSurfaceProvider());
         } catch (Exception ex) {
-            listener.onError(ex, "Unable to bind the camera use cases life cycle to fragment.");
+            invokeListenerOnError(ex, "Unable to bind the camera use cases life cycle to fragment.");
         }
     }
 
     private ImageAnalysis setupImageAnalysis() {
-//        ImageAnalysisCon imageAnalysisConfig = new ImageAnalysisConfig.Builder()
-//                .setImageReaderMode(ImageAnalysis.ImageReaderMode.ACQUIRE_LATEST_IMAGE)
-//                .setCallbackHandler(new Handler(analyzerThread.getLooper()))
-//                .setImageQueueDepth(1).build();
-
         ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
                 .setTargetResolution(getTargetResolution(cameraMode))
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
                 .build();
 
-        imageAnalysis.setAnalyzer(cameraExecutor, (image) -> {
-            processCameraFrame(image);
-        });
+        imageAnalysis.setAnalyzer(cameraExecutor, this::processCameraFrame);
 
         return imageAnalysis;
     }
@@ -148,9 +162,23 @@ public class CameraCaptureFragment extends Fragment {
         }
 
         bitmapBuffer.copyPixelsFromBuffer(image.getPlanes()[0].getBuffer());
-        getActivity().runOnUiThread(() -> {
-            cameraProcessedSurface.setImageBitmap(bitmapBuffer);
-        });
+
+        Activity activity = getActivity();
+
+        if (activity != null) {
+            Bitmap frame = adjustBitmapOrientation(activity, bitmapBuffer);
+            Mat frameMat = new Mat();
+            Utils.bitmapToMat(frame, frameMat);
+            invokeListenerNewFrame(frame, frameMat);
+
+            activity.runOnUiThread(() -> {
+                cameraProcessedSurface.setImageBitmap(frame);
+
+                releaseMemory(frame, frameMat);
+            });
+        } else {
+            invokeListenerOnError(null, "Can not access the containing activity.");
+        }
         image.close();
         //        Utils.
 //        final Bitmap bitmap = image.getImage();
@@ -173,6 +201,46 @@ public class CameraCaptureFragment extends Fragment {
 //            }
 //        });
     }
+
+    private void releaseMemory(Bitmap frame, Mat frameMat) {
+        frameMat.release();
+        frame.recycle();
+    }
+
+    private void invokeListenerOnError(Exception ex, String message) {
+        if (listener != null) {
+            listener.onError(ex, message);
+        }
+    }
+
+    private void invokeListenerNewFrame(Bitmap frame, Mat frameMat) {
+        if (listener != null) {
+            listener.onNewFrame(frame, frameMat);
+        }
+    }
+
+    @SuppressLint({"UnsafeOptInUsageError", "RestrictedApi"})
+    private Bitmap adjustBitmapOrientation(Activity activity, Bitmap buffer) {
+        int rotation = getDeviceRotation(activity);
+        switch (cameraSensorOrientation) {
+            case SENSOR_ORIENTATION_DEFAULT_DEGREES:
+                rotation = DEFAULT_ORIENTATIONS.get(rotation);
+                break;
+            case SENSOR_ORIENTATION_INVERSE_DEGREES:
+                rotation = INVERSE_ORIENTATIONS.get(rotation);
+                break;
+        }
+
+        Matrix matrix = new Matrix();
+        matrix.postRotate(rotation);
+        return Bitmap.createBitmap(buffer, 0, 0, buffer.getWidth(), buffer.getHeight(), matrix, true);
+    }
+
+    private int getDeviceRotation(Activity activity) {
+        int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
+        return rotation;
+    }
+
 
     private Size getTargetResolution(int cameraMode) {
         if (cameraMode == AspectRatio.RATIO_4_3) {
