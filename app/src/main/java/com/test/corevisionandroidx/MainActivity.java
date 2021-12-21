@@ -59,6 +59,8 @@ public class MainActivity extends AppCompatActivity implements LoaderCallbackInt
 
         Bundle bundle = new Bundle();
         bundle.putInt("aspect_ratio", AspectRatio.RATIO_16_9);
+        bundle.putString("listener_name", "capture_overlay_canny_filter");
+
         getSupportFragmentManager().beginTransaction()
                 .setReorderingAllowed(true)
                 .add(R.id.fragment_container, CameraCaptureFragment.class, bundle)

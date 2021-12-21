@@ -31,10 +31,13 @@ import androidx.fragment.app.Fragment;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.test.corevisionandroidx.R;
+import com.test.corevisionandroidx.core.overlays.OpenCVCannyFilterExampleOverlay;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -55,19 +58,34 @@ public class CameraCaptureFragment extends Fragment {
     private int cameraSensorOrientation = -1;
     private static final SparseIntArray INVERSE_ORIENTATIONS = new SparseIntArray();
     private static final SparseIntArray DEFAULT_ORIENTATIONS = new SparseIntArray();
+    private static final Map<String, ICameraCaptureFragmentListener> availableListeners = new HashMap<>();
 
     static {
         INVERSE_ORIENTATIONS.append(Surface.ROTATION_270, 0);
         INVERSE_ORIENTATIONS.append(Surface.ROTATION_180, 90);
         INVERSE_ORIENTATIONS.append(Surface.ROTATION_90, 180);
         INVERSE_ORIENTATIONS.append(Surface.ROTATION_0, 270);
-    }
 
-    static {
         DEFAULT_ORIENTATIONS.append(Surface.ROTATION_90, 0);
         DEFAULT_ORIENTATIONS.append(Surface.ROTATION_0, 90);
         DEFAULT_ORIENTATIONS.append(Surface.ROTATION_270, 180);
         DEFAULT_ORIENTATIONS.append(Surface.ROTATION_180, 270);
+
+        populateAvailableListeners();
+    }
+
+    private static void populateAvailableListeners() {
+        addAvailableListener(OpenCVCannyFilterExampleOverlay.class);
+    }
+
+    private static void addAvailableListener(Class cls) {
+        try {
+            ICameraCaptureFragmentListener listener = (ICameraCaptureFragmentListener) cls.newInstance();
+            availableListeners.put(listener.getListenerName(), listener);
+        } catch (Exception e) {
+            // This should not happen. Check why it is the case!
+            throw new RuntimeException(e);
+        }
     }
 
     public CameraCaptureFragment() {
@@ -83,6 +101,19 @@ public class CameraCaptureFragment extends Fragment {
         cameraProcessedSurface = view.findViewById(R.id.camera_processed_surface);
         setViewAspectRatio();
         setupCamera();
+
+        setupListener();
+    }
+
+    private void setupListener() {
+        String listenerName = null;
+        if (getArguments() != null) {
+            listenerName = getArguments().getString("listener_name", null);
+        }
+
+        if (listenerName == null) throw new RuntimeException();
+        listener = availableListeners.get(listenerName).createNewInstance();
+        listener.setContainer(getActivity(), this);
     }
 
     private void setViewAspectRatio() {
