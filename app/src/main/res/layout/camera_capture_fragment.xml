@@ -22,4 +22,15 @@
         app:layout_constraintLeft_toLeftOf="parent"
         android:layout_height="0dp" />
 
+    <TextView
+        android:id="@+id/camera_debug_information"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:background="#80ffffff"
+        android:textColor="@color/black"
+        android:textSize="20sp"
+        app:layout_constraintTop_toTopOf="parent"
+        />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

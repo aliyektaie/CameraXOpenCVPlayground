@@ -12,6 +12,7 @@ import android.util.SparseIntArray;
 import android.view.Surface;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -41,7 +42,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class CameraCaptureFragment extends Fragment {
+public class CameraCaptureFragment extends Fragment implements IFramePerSecondCounterListener {
     private static final int SENSOR_ORIENTATION_INVERSE_DEGREES = 270;
     private static final int SENSOR_ORIENTATION_DEFAULT_DEGREES = 90;
 
@@ -53,6 +54,7 @@ public class CameraCaptureFragment extends Fragment {
     private ImageAnalysis imageAnalysis = null;
     private Camera camera = null;
     private PreviewView cameraPreviewSurface = null;
+    private TextView cameraDebugInformation = null;
     private ImageView cameraProcessedSurface = null;
     private Bitmap bitmapBuffer = null;
     private Bitmap previousFrame = null;
@@ -60,6 +62,7 @@ public class CameraCaptureFragment extends Fragment {
     private static final SparseIntArray INVERSE_ORIENTATIONS = new SparseIntArray();
     private static final SparseIntArray DEFAULT_ORIENTATIONS = new SparseIntArray();
     private static final Map<String, ICameraCaptureFragmentListener> availableListeners = new HashMap<>();
+    private FramePerSecondCounter fpsCounter = null;
 
     static {
         INVERSE_ORIENTATIONS.append(Surface.ROTATION_270, 0);
@@ -100,10 +103,19 @@ public class CameraCaptureFragment extends Fragment {
         cameraExecutor = Executors.newSingleThreadExecutor();
         cameraPreviewSurface = view.findViewById(R.id.camera_preview_surface);
         cameraProcessedSurface = view.findViewById(R.id.camera_processed_surface);
+        cameraDebugInformation = view.findViewById(R.id.camera_debug_information);
         setViewAspectRatio();
         setupCamera();
 
         setupListener();
+
+        setupFramePerSecondCounter();
+    }
+
+    private void setupFramePerSecondCounter() {
+        fpsCounter = new FramePerSecondCounter();
+        fpsCounter.setListener(this);
+        fpsCounter.start();
     }
 
     private void setupListener() {
@@ -189,6 +201,7 @@ public class CameraCaptureFragment extends Fragment {
     }
 
     private void processCameraFrame(ImageProxy image) {
+        if (fpsCounter != null) fpsCounter.onFrame();
         if (bitmapBuffer == null) {
             bitmapBuffer = Bitmap.createBitmap(image.getWidth(), image.getHeight(), Bitmap.Config.ARGB_8888);
         }
@@ -202,7 +215,7 @@ public class CameraCaptureFragment extends Fragment {
             Mat frameMat = new Mat();
             Utils.bitmapToMat(frame, frameMat);
             Mat frameToDisplay = invokeListenerNewFrame(frame, frameMat);
-            Bitmap bitmapToDisplay = Bitmap.createBitmap(frameToDisplay.cols(), frameToDisplay.rows(),Bitmap.Config.ARGB_8888);
+            Bitmap bitmapToDisplay = Bitmap.createBitmap(frameToDisplay.cols(), frameToDisplay.rows(), Bitmap.Config.ARGB_8888);
             Utils.matToBitmap(frameToDisplay, bitmapToDisplay);
             frame.recycle();
 
@@ -286,16 +299,34 @@ public class CameraCaptureFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+
+        if (fpsCounter != null) fpsCounter.resume();
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+
+        if (fpsCounter != null) fpsCounter.pause();
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
 
+        if (fpsCounter != null) fpsCounter.stop();
         cameraExecutor.shutdown();
     }
 
     public int getCameraAspectRatio() {
         return this.cameraMode;
+    }
+
+    @Override
+    public void onFramePerSecondUpdate(int fps) {
+        String content = String.format("FPS: %d", fps);
+        getActivity().runOnUiThread(()-> {
+            cameraDebugInformation.setText(content);
+        });
     }
 }
