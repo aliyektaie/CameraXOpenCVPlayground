@@ -21,4 +21,6 @@ public interface ICameraCaptureFragmentListener {
     double requiredZoomScale();
 
     Size requiredFrameSize();
+
+    boolean requiresCameraPreview();
 }

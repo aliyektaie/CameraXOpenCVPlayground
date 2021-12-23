@@ -59,13 +59,19 @@ public class OpenCVCannyFilterExampleOverlay extends BaseCameraCaptureListener16
 
     @Override
     public double requiredZoomScale() {
-        return 1.0;
+        return 2.0;
     }
 
     @Override
     public Size requiredFrameSize() {
-        return new Size(480, 853);
+//        return new Size(480, 853);
+        return new Size(480, 640);
 //        return new Size(720, 1280);
 //        return null;
+    }
+
+    @Override
+    public boolean requiresCameraPreview() {
+        return false;
     }
 }

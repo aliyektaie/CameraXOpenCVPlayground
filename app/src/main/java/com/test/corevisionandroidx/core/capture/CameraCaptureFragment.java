@@ -111,6 +111,10 @@ public class CameraCaptureFragment extends Fragment implements IFramePerSecondCo
 
 
         setupFramePerSecondCounter();
+
+        if (!listener.requiresCameraPreview()) {
+            cameraPreviewSurface.setVisibility(View.INVISIBLE);
+        }
     }
 
     private void setupFramePerSecondCounter() {
