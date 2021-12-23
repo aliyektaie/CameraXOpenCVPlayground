@@ -131,7 +131,7 @@ public class CameraCaptureFragment extends Fragment implements IFramePerSecondCo
     }
 
     private void setViewAspectRatio() {
-        cameraMode = listener.getCameraRatioMode();
+        cameraMode = getAspectRatioFromRequestedOutput(listener.requiredFrameSize());
 
         ConstraintLayout.LayoutParams previewLayoutParams = (ConstraintLayout.LayoutParams) cameraPreviewSurface.getLayoutParams();
         ConstraintLayout.LayoutParams processedLayoutParams = (ConstraintLayout.LayoutParams) cameraProcessedSurface.getLayoutParams();
@@ -144,6 +144,21 @@ public class CameraCaptureFragment extends Fragment implements IFramePerSecondCo
         } else {
             throw new RuntimeException();
         }
+    }
+
+    private int getAspectRatioFromRequestedOutput(org.opencv.core.Size size) {
+        Size s = listener.getCameraTargetResolution();
+        if (size == null) size = new org.opencv.core.Size(s.getWidth(), s.getHeight());
+        double ratio = size.width / size.height;
+        int result = 0;
+
+        if (Math.abs(ratio - (3.0 / 4.0)) < 0.1) {
+            result = AspectRatio.RATIO_4_3;
+        } else if (Math.abs(ratio - (9.0 / 16.0)) < 0.1) {
+            result = AspectRatio.RATIO_16_9;
+        }
+
+        return result;
     }
 
     private void setupCamera() {
@@ -192,7 +207,7 @@ public class CameraCaptureFragment extends Fragment implements IFramePerSecondCo
 
     private ImageAnalysis setupImageAnalysis() {
         ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
-                .setTargetResolution(getTargetResolution(cameraMode))
+                .setTargetResolution(listener.getCameraTargetResolution())
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
                 .build();
@@ -300,7 +315,16 @@ public class CameraCaptureFragment extends Fragment implements IFramePerSecondCo
 
         Matrix matrix = new Matrix();
         matrix.postRotate(rotation);
-        return Bitmap.createBitmap(buffer, 0, 0, buffer.getWidth(), buffer.getHeight(), matrix, true);
+        Bitmap temp = Bitmap.createBitmap(buffer, 0, 0, buffer.getWidth(), buffer.getHeight(), matrix, true);
+        Bitmap result = temp;
+
+        if (listener instanceof ICustomCameraFrameCropperOverlay) {
+            result = ((ICustomCameraFrameCropperOverlay)listener).cropCameraFrame(temp);
+            temp.recycle();
+            temp = null;
+        }
+
+        return result;
     }
 
     private int getDeviceRotation(Activity activity) {
@@ -309,13 +333,13 @@ public class CameraCaptureFragment extends Fragment implements IFramePerSecondCo
     }
 
 
-    private Size getTargetResolution(int cameraMode) {
-        if (cameraMode == AspectRatio.RATIO_4_3) {
-            return new Size(720, 960);
-        } else {
-            return new Size(720, 1280);
-        }
-    }
+//    private Size getTargetResolution(int cameraMode) {
+//        if (cameraMode == AspectRatio.RATIO_4_3) {
+//            return new Size(720, 960);
+//        } else {
+//            return new Size(720, 1280);
+//        }
+//    }
 
     private boolean hasBackCamera() {
         try {

@@ -16,7 +16,7 @@ public interface ICameraCaptureFragmentListener {
 
     void initialize(Activity activity, CameraCaptureFragment fragment);
 
-    int getCameraRatioMode();
+    android.util.Size getCameraTargetResolution();
 
     double requiredZoomScale();
 
