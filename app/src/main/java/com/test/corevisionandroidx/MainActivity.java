@@ -58,7 +58,6 @@ public class MainActivity extends AppCompatActivity implements LoaderCallbackInt
         OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, getApplicationContext(), this);
 
         Bundle bundle = new Bundle();
-        bundle.putInt("aspect_ratio", AspectRatio.RATIO_16_9);
         bundle.putString("listener_name", "capture_overlay_canny_filter");
 
         getSupportFragmentManager().beginTransaction()

@@ -3,6 +3,8 @@ package com.test.corevisionandroidx.core.overlays;
 import android.graphics.Bitmap;
 import android.widget.Toast;
 
+import androidx.camera.core.AspectRatio;
+
 import com.test.corevisionandroidx.core.capture.BaseCameraCaptureListener;
 import com.test.corevisionandroidx.core.capture.ICameraCaptureFragmentListener;
 
@@ -44,5 +46,15 @@ public class OpenCVCannyFilterExampleOverlay extends BaseCameraCaptureListener {
         blurred.release();
 
         return edges;
+    }
+
+    @Override
+    public int getCameraRatioMode() {
+        return AspectRatio.RATIO_16_9;
+    }
+
+    @Override
+    public double requiredZoomScale() {
+        return 2.0;
     }
 }

@@ -99,6 +99,7 @@ public class CameraCaptureFragment extends Fragment implements IFramePerSecondCo
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        setupListener();
 
         cameraExecutor = Executors.newSingleThreadExecutor();
         cameraPreviewSurface = view.findViewById(R.id.camera_preview_surface);
@@ -107,7 +108,6 @@ public class CameraCaptureFragment extends Fragment implements IFramePerSecondCo
         setViewAspectRatio();
         setupCamera();
 
-        setupListener();
 
         setupFramePerSecondCounter();
     }
@@ -130,7 +130,7 @@ public class CameraCaptureFragment extends Fragment implements IFramePerSecondCo
     }
 
     private void setViewAspectRatio() {
-        cameraMode = this.getArguments() != null ? this.getArguments().getInt("aspect_ratio", AspectRatio.RATIO_4_3) : AspectRatio.RATIO_4_3;
+        cameraMode = listener.getCameraRatioMode();
 
         ConstraintLayout.LayoutParams previewLayoutParams = (ConstraintLayout.LayoutParams) cameraPreviewSurface.getLayoutParams();
         ConstraintLayout.LayoutParams processedLayoutParams = (ConstraintLayout.LayoutParams) cameraProcessedSurface.getLayoutParams();
@@ -177,6 +177,7 @@ public class CameraCaptureFragment extends Fragment implements IFramePerSecondCo
         cameraProvider.unbindAll();
         try {
             camera = cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis);
+            camera.getCameraControl().setZoomRatio((float) listener.requiredZoomScale());
 
             @SuppressLint({"RestrictedApi", "UnsafeOptInUsageError"})
             CameraCharacteristics cameraCharacteristics = Camera2CameraInfo.extractCameraCharacteristics(camera.getCameraInfo());

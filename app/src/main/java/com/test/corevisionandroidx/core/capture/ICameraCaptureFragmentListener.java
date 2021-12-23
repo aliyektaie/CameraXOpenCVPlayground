@@ -16,4 +16,8 @@ public interface ICameraCaptureFragmentListener {
     Mat onNewFrame(Bitmap frame, Mat opencvFrame);
 
     void setContainer(Activity activity, CameraCaptureFragment fragment);
+
+    int getCameraRatioMode();
+
+    double requiredZoomScale();
 }
