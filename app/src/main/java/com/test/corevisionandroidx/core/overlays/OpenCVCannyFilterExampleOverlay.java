@@ -6,6 +6,7 @@ import android.widget.Toast;
 import androidx.camera.core.AspectRatio;
 
 import com.test.corevisionandroidx.core.capture.BaseCameraCaptureListener;
+import com.test.corevisionandroidx.core.capture.CameraFrame;
 import com.test.corevisionandroidx.core.capture.ICameraCaptureFragmentListener;
 
 import org.opencv.core.CvType;
@@ -32,20 +33,23 @@ public class OpenCVCannyFilterExampleOverlay extends BaseCameraCaptureListener {
     }
 
     @Override
-    public Mat onNewFrame(Bitmap frame, Mat opencvFrame) {
-        Mat gray = new Mat(opencvFrame.rows(), opencvFrame.cols(), CvType.CV_8UC1);
-        Mat blurred = new Mat(opencvFrame.rows(), opencvFrame.cols(), opencvFrame.type());
-        Mat edges = new Mat(opencvFrame.rows(), opencvFrame.cols(), opencvFrame.type());
+    public Mat onNewFrame(CameraFrame frame) {
+        Mat opencvFrame = frame.frameWithRequestedSize;
+//        Mat gray = new Mat(opencvFrame.rows(), opencvFrame.cols(), CvType.CV_8UC1);
+//        Mat blurred = new Mat(opencvFrame.rows(), opencvFrame.cols(), opencvFrame.type());
+//        Mat edges = new Mat(opencvFrame.rows(), opencvFrame.cols(), opencvFrame.type());
+//
+//        Imgproc.GaussianBlur(opencvFrame, blurred, BLUR_KERNEL_SIZE, 1);
+//        Imgproc.cvtColor(blurred, gray, Imgproc.COLOR_RGBA2GRAY);
+//
+//        Imgproc.Canny(gray, edges, 100, 100);
+//
+//        gray.release();
+//        blurred.release();
+//
+//        return edges;
 
-        Imgproc.GaussianBlur(opencvFrame, blurred, BLUR_KERNEL_SIZE, 1);
-        Imgproc.cvtColor(blurred, gray, Imgproc.COLOR_RGBA2GRAY);
-
-        Imgproc.Canny(gray, edges, 100, 100);
-
-        gray.release();
-        blurred.release();
-
-        return edges;
+        return opencvFrame;
     }
 
     @Override
@@ -56,5 +60,11 @@ public class OpenCVCannyFilterExampleOverlay extends BaseCameraCaptureListener {
     @Override
     public double requiredZoomScale() {
         return 2.0;
+    }
+
+    @Override
+    public Size requiredFrameSize() {
+//        return new Size(480, 853);
+        return null;
     }
 }

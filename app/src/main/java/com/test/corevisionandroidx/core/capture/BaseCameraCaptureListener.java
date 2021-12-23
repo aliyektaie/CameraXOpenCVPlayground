@@ -7,7 +7,7 @@ public abstract class BaseCameraCaptureListener implements ICameraCaptureFragmen
     protected CameraCaptureFragment _fragment = null;
 
     @Override
-    public void setContainer(Activity activity, CameraCaptureFragment fragment) {
+    public void initialize(Activity activity, CameraCaptureFragment fragment) {
         _activity = activity;
         _fragment = fragment;
     }

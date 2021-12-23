@@ -36,6 +36,7 @@ import com.test.corevisionandroidx.core.overlays.OpenCVCannyFilterExampleOverlay
 
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -126,7 +127,7 @@ public class CameraCaptureFragment extends Fragment implements IFramePerSecondCo
 
         if (listenerName == null) throw new RuntimeException();
         listener = availableListeners.get(listenerName).createNewInstance();
-        listener.setContainer(getActivity(), this);
+        listener.initialize(getActivity(), this);
     }
 
     private void setViewAspectRatio() {
@@ -212,23 +213,50 @@ public class CameraCaptureFragment extends Fragment implements IFramePerSecondCo
         Activity activity = getActivity();
 
         if (activity != null) {
-            Bitmap frame = adjustBitmapOrientation(activity, bitmapBuffer);
-            Mat frameMat = new Mat();
-            Utils.bitmapToMat(frame, frameMat);
-            Mat frameToDisplay = invokeListenerNewFrame(frame, frameMat);
+            CameraFrame frame = new CameraFrame();
+            frame.originalCameraFrame = adjustBitmapOrientation(activity, bitmapBuffer);
+            setAdjustedFrame(frame);
+            Mat frameToDisplay = invokeListenerNewFrame(frame);
             Bitmap bitmapToDisplay = Bitmap.createBitmap(frameToDisplay.cols(), frameToDisplay.rows(), Bitmap.Config.ARGB_8888);
             Utils.matToBitmap(frameToDisplay, bitmapToDisplay);
-            frame.recycle();
+            frame.originalCameraFrame.recycle();
 
             activity.runOnUiThread(() -> {
                 cameraProcessedSurface.setImageBitmap(bitmapToDisplay);
-
-                releaseMemory(bitmapToDisplay, frameMat);
+                releaseMemory(bitmapToDisplay, frame.frameWithRequestedSize);
             });
         } else {
             invokeListenerOnError(null, "Can not access the containing activity.");
         }
         image.close();
+    }
+
+    private void setAdjustedFrame(CameraFrame frame) {
+        frame.frameWithRequestedSize = new Mat();
+
+        org.opencv.core.Size requested = listener.requiredFrameSize();
+        double dx = 1.0;
+        double dy = 1.0;
+
+        if (requested != null) {
+            dx = requested.width / frame.frameWithRequestedSize.cols();
+            dy = requested.height / frame.frameWithRequestedSize.rows();
+        }
+
+        if (dx != 1.0 || dy != 1.0) {
+//            int mode = Imgproc.INTER_AREA;
+//            if (dx > 1.0 || dy > 1.0) mode = Imgproc.INTER_CUBIC;
+//            Mat resized = new Mat();
+//            Imgproc.resize(frame.frameWithRequestedSize, resized, new org.opencv.core.Size(), dx, dy, mode);
+//            frame.frameWithRequestedSize.release();
+//            frame.frameWithRequestedSize = resized;
+
+            Bitmap resized = Bitmap.createScaledBitmap(frame.originalCameraFrame, (int) requested.width, (int) requested.height, false);
+            Utils.bitmapToMat(resized, frame.frameWithRequestedSize);
+            resized.recycle();
+        } else {
+            Utils.bitmapToMat(frame.originalCameraFrame, frame.frameWithRequestedSize);
+        }
     }
 
     private void releaseMemory(Bitmap frame, Mat frameMat) {
@@ -244,12 +272,12 @@ public class CameraCaptureFragment extends Fragment implements IFramePerSecondCo
         }
     }
 
-    private Mat invokeListenerNewFrame(Bitmap frame, Mat frameMat) {
+    private Mat invokeListenerNewFrame(CameraFrame frame) {
         Mat result = null;
 
         if (listener != null) {
             try {
-                result = listener.onNewFrame(frame, frameMat);
+                result = listener.onNewFrame(frame);
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
             }
@@ -326,7 +354,7 @@ public class CameraCaptureFragment extends Fragment implements IFramePerSecondCo
     @Override
     public void onFramePerSecondUpdate(int fps) {
         String content = String.format("FPS: %d", fps);
-        getActivity().runOnUiThread(()-> {
+        getActivity().runOnUiThread(() -> {
             cameraDebugInformation.setText(content);
         });
     }

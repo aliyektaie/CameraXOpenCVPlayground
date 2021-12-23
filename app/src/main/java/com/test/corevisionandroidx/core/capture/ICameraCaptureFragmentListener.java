@@ -2,9 +2,8 @@ package com.test.corevisionandroidx.core.capture;
 
 import android.app.Activity;
 import android.graphics.Bitmap;
-
-import org.opencv.android.Utils;
 import org.opencv.core.Mat;
+import org.opencv.core.Size;
 
 public interface ICameraCaptureFragmentListener {
     String getListenerName();
@@ -13,11 +12,13 @@ public interface ICameraCaptureFragmentListener {
 
     void onError(Exception ex, String message);
 
-    Mat onNewFrame(Bitmap frame, Mat opencvFrame);
+    Mat onNewFrame(CameraFrame frame);
 
-    void setContainer(Activity activity, CameraCaptureFragment fragment);
+    void initialize(Activity activity, CameraCaptureFragment fragment);
 
     int getCameraRatioMode();
 
     double requiredZoomScale();
+
+    Size requiredFrameSize();
 }
